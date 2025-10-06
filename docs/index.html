@@ -1,617 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Dual Mobile Mockup v0.3 — UNO → DUAL → TRINITY (Baú, Menu, Módulos)</title>
-<meta name="theme-color" content="#0b0f17" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>KOBLLUX — Nebula Masterclass · Inline Shader + Sigil</title>
 <style>
-  :root{
-    --bg:#0b0f17;--panel:#0f1522;--glass:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);
-    --ink:#e9f6ff;--muted:#97b1c6;--accent:#29d3ff;--accent2:#ff5af4;--ok:#39ffb6;--warn:#ffb74d;--err:#ff5a6e;
-    --rad:18px;--pad:14px;--shadow:0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{
-    margin:0;font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
-    color:var(--ink);
-    background:radial-gradient(1200px 800px at 20% -10%, rgba(41,211,255,.1) 0%, var(--bg) 55%, var(--bg) 100%);
-    overflow-x:hidden;
-    display:flex;flex-direction:column;
-  }
-  /* UTILS */
-  .mut{color:var(--muted)}
-  .ok{color:var(--ok)}
-  .warn{color:var(--warn)}
-  .err{color:var(--err)}
-  .glass{background:var(--glass);backdrop-filter:blur(12px) saturate(150%);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--shadow);}
-  .line{border-top:1px solid var(--line);margin:var(--pad) 0;}
-  .btn{
-    display:inline-flex;align-items:center;justify-content:center;
-    padding:8px 16px;border-radius:12px;cursor:pointer;
-    background:var(--panel);border:1px solid var(--line);
-    transition:background .2s, border-color .2s;
-  }
-  .btn:hover{background:rgba(255,255,255,.1);border-color:var(--accent)}
-  .btn:active{background:rgba(255,255,255,.15)}
-  .btn.accent{background:var(--accent);color:var(--bg);font-weight:600;border-color:var(--accent)}
-  .btn.accent:hover{background:var(--accent2);border-color:var(--accent2)}
-  .btn-icon{width:36px;height:36px;padding:0;border-radius:50%;}
+:root{
+  --bg:#000; --fg:#eaf2ff; --mut:#9aa6b2;
+  --grad-a:#ff52e5; --grad-b:#00c5e5;
+}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Montserrat',sans-serif;color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+#appRoot{position:relative;min-height:100vh;display:grid;place-items:center;overflow:hidden}
 
-  /* LAYOUT */
-  #console{
-    position:fixed;bottom:0;left:0;right:0;height:0;
-    background:rgba(0,0,0,.9);border-top:1px solid var(--accent);
-    color:var(--ok);font-size:12px;padding:0 var(--pad);overflow:auto;
-    transition:height .3s cubic-bezier(0.25, 0.46, 0.45, 0.94);z-index:1000;
-  }
-  #console.show{height:200px}
-  #hud{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:var(--pad) 16px;z-index:20;
-    background:rgba(0,0,0,.2);border-bottom:1px solid var(--line);
-  }
-  #brain{
-    flex:1;padding:16px;display:flex;flex-direction:column;gap:16px;
-    overflow-y:auto;
-  }
+/* Top-centered theme toggle (outline circle 33x33) */
+.theme-toggle{
+  position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:140;
+  width:33px;height:33px;border-radius:50%;border:2px solid rgba(255,255,255,.12);
+  display:grid;place-items:center;background:transparent;cursor:pointer;backdrop-filter:blur(2px);
+}
 
-  /* PANEL GERAL */
-  .panel{
-    display:flex;flex-direction:column;
-    padding:var(--pad);
-    background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-  }
-  .panel-header{
-    display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
-    font-size:1.1em;font-weight:600;
-  }
-  .panel-body{
-    flex:1;font-size:13px;
-  }
+/* global glow controlled by orb center */
+.orb-global-glow{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:1200px;height:1200px;border-radius:50%;pointer-events:none;z-index:0;background:radial-gradient(circle at 40% 35%, var(--grad-a) 0%, var(--grad-b) 40%, rgba(0,0,0,0) 60%);filter:blur(120px) saturate(1.05);mix-blend-mode:screen;opacity:.95}
 
-  /* MODULE SPECIFICS */
-  #panel-core-storage .status-grid{
-    display:grid;grid-template-columns:auto 1fr;gap:6px 10px;
-  }
+/* Splash orb center */
+#splash{position:absolute;inset:0;display:grid;place-items:center;z-index:10}
+.orbe{width:180px;aspect-ratio:1;border-radius:999px;cursor:pointer;position:relative;
+  background:radial-gradient(circle at 30% 25%, var(--grad-a) 0%, var(--grad-b) 65%, #001a22 100%);
+  box-shadow:0 0 120px rgba(0,197,229,.35), inset 0 0 100px rgba(255,82,229,.22);
+  animation:orbepulse 2.2s ease-in-out infinite;filter:drop-shadow(0 10px 40px rgba(0,0,0,.6))}
+@keyframes orbepulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
-  /* MENU ESTOJO */
-  #menuEstojo{
-    position:fixed;top:60px;right:16px;
-    width:300px;max-width:calc(100% - 32px);
-    background:var(--panel);border:1px solid var(--accent);
-    border-radius:var(--rad);
-    padding:var(--pad);
-    z-index:50;
-    transform:scale(.95);opacity:0;pointer-events:none;
-    transition:transform .2s, opacity .2s;
-  }
-  #menuEstojo.show{transform:scale(1);opacity:1;pointer-events:auto;}
-  .module-item{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:8px 0;
-  }
-  .module-item:not(:last-child){border-bottom:1px solid rgba(255,255,255,.08);}
+/* HUD and panels */
+.hud{position:fixed;left:14px;top:14px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.28);box-shadow:0 12px 34px rgba(0,0,0,.6);z-index:120}
+.btn{appearance:none;border:0;background:rgba(255,255,255,.04);color:var(--fg);padding:6px 10px;border-radius:10px;cursor:pointer}
+.btn-ghost{background:transparent;border:1px dashed rgba(255,255,255,.06)}
 
-  /* TOGGLE SWITCH - CSS from scratch for aesthetics */
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-    cursor: pointer;
-  }
-  .toggle-switch input {opacity: 0; width: 0; height: 0;}
-  .slider {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--line);
-    transition: .4s;
-    border-radius: 12px;
-  }
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: var(--ink);
-    transition: .4s;
-    border-radius: 50%;
-  }
-  input:checked + .slider {background-color: var(--accent);}
-  input:checked + .slider:before {
-    transform: translateX(20px);
-    background-color: var(--bg);
-  }
+/* Sigil area */
+#sigilPanel{position:fixed;right:14px;top:84px;width:320px;z-index:160}
+.sigil-card{background:rgba(255,255,255,.02);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.03)}
+.sigil-preview{width:260px;height:260px;display:block;margin:8px auto;border-radius:8px;background:#06060a}
 
-  /* TOAST */
-  #toast{
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-    background:rgba(0,0,0,.8);color:var(--ok);padding:10px 20px;border-radius:10px;
-    border:1px solid var(--ok);box-shadow:0 4px 12px rgba(0,0,0,.5);
-    opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;
-  }
-  #toast.show{opacity:1;}
+/* Canvas */
+#kx3gs{position:fixed;inset:0;z-index:0;pointer-events:none;background:var(--bg)}
+canvas{width:100%;height:100%}
+
+/* Modal */
+#masterclassModal{display:none;position:fixed;inset:0;z-index:13000;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)}
+.modal-card{width:min(880px,96vw);max-height:86vh;overflow:auto;background:#071017;padding:22px;border-radius:12px;border:1px solid rgba(255,255,255,0.02);box-shadow:0 30px 80px rgba(0,0,0,.8)}
+.master-title{font-weight:800;font-size:1.25rem;color:var(--grad-a);margin-bottom:6px}
+.master-body p{line-height:1.6;color:#dfe9f6}
 </style>
-<!-- Firebase Imports -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, onSnapshot, getDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-  // Variáveis globais obrigatórias do ambiente Canvas
-  const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-dual-app-id';
-  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-  // Objeto de estado global
-  window.S = {
-    // Estado do sistema e UI
-    authReady: false,
-    firestoreStatus: 'Desconectado',
-    userId: null,
-    consoleOpen: false,
-    estojoOpen: false,
-
-    // Configuração persistente (com valores iniciais para fallback)
-    config: JSON.parse(localStorage.getItem('S.config') || JSON.stringify({
-      lastSave: 0,
-      lastLoad: 0,
-      modules: {
-        'core.storage': { active: true, name: 'Baú (Config)', icon: '📦' },
-        'net.ping': { active: true, name: 'Rede & Ping', icon: '📶' },
-        'sec.keys': { active: false, name: 'Chaves SK', icon: '🔑' },
-        'app.dual': { active: true, name: 'Dual App (Placeholder)', icon: '📺' },
-      },
-      packs: {},
-    })),
-    
-    // Lista de módulos para iteração
-    modules: ['core.storage', 'net.ping', 'sec.keys', 'app.dual'],
-    
-    // Instâncias Firebase
-    app: null,
-    db: null,
-    auth: null,
-  };
-
-  setLogLevel('Debug'); // Habilita logs para depuração
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  // Armazena as instâncias no estado global
-  S.app = app;
-  S.db = db;
-  S.auth = auth;
-
-  // --- Helpers Firestore ---
-  const getConfigDocRef = (db, userId, appId) => {
-    // Caminho privado: /artifacts/{appId}/users/{userId}/dual_config/main
-    return doc(db, `artifacts/${appId}/users/${userId}/dual_config/main`);
-  };
-
-  /** Salva S.config no Firestore */
-  window.saveConfigToFirestore = async () => {
-    if (!S.authReady || !S.userId) return console.warn('Auth não está pronta para salvar.');
-    
-    // Atualiza o timestamp antes de salvar
-    S.config.lastSave = Date.now();
-    const configToSave = JSON.parse(JSON.stringify(S.config)); // Clonar para garantir que é um objeto limpo
-
-    try {
-      const docRef = getConfigDocRef(S.db, S.userId, appId);
-      await setDoc(docRef, { config: configToSave }, { merge: true });
-      localStorage.setItem('S.config', JSON.stringify(S.config)); // Backup local
-      
-      console.log('Configuração salva no Firestore e localStorage.');
-      renderConfigPanel();
-    } catch (e) {
-      console.error('Erro ao salvar no Firestore:', e);
-      S.firestoreStatus = 'ERRO';
-      renderConfigPanel();
-    }
-  };
-
-  /** Configura o listener em tempo real (onSnapshot) */
-  const setupConfigListener = (userId) => {
-    const docRef = getConfigDocRef(S.db, userId, appId);
-    
-    onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists() && docSnap.data().config) {
-        const firestoreConfig = docSnap.data().config;
-        
-        // Carrega a config do Firestore
-        S.config = {
-          ...S.config, // Preserva quaisquer outras chaves que não sejam do Firestore
-          ...firestoreConfig,
-          lastLoad: Date.now(),
-        };
-
-        // Verifica se o módulo de storage está ativo e o renderiza (Importante!)
-        if (!S.config.modules || !S.config.modules['core.storage']) {
-             S.config.modules = S.config.modules || {};
-             S.config.modules['core.storage'] = S.config.modules['core.storage'] || { active: true, name: 'Baú (Config)', icon: '📦' };
-        }
-
-        S.firestoreStatus = 'Conectado';
-        localStorage.setItem('S.config', JSON.stringify(S.config));
-        
-        console.log('Configuração carregada do Firestore.');
-        renderBrain(); // Renderiza todo o HUD/Painéis
-        renderEstojo(); // Renderiza o menu de módulos
-      } else {
-        S.firestoreStatus = 'Novo';
-        console.log('Documento de configuração não existe. Usando config local/padrão.');
-        // Se o documento não existe, tenta salvar a config local/padrão para inicializar
-        saveConfigToFirestore();
-      }
-      renderConfigPanel(); // Garante que o painel de status seja atualizado
-    }, (error) => {
-      console.error('Erro no listener do Firestore:', error);
-      S.firestoreStatus = 'ERRO';
-      renderConfigPanel();
-    });
-  };
-
-  // --- Autenticação ---
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      S.userId = user.uid;
-      S.authReady = true;
-      console.log('Usuário autenticado:', S.userId);
-      setupConfigListener(S.userId);
-    } else {
-      S.authReady = true;
-      S.userId = 'anon_' + crypto.randomUUID(); // Fallback para ID anônimo (mas sem Firestore)
-      S.firestoreStatus = 'Local (Sem Login)';
-      console.warn('Usuário não autenticado. Usando ID anônimo.');
-      renderBrain();
-      renderConfigPanel();
-    }
-  });
-
-  // Tenta logar com o token personalizado ou anonimamente
-  async function signIn() {
-    try {
-      // 1. Persistência local (para o token de sessão)
-      await setPersistence(auth, browserLocalPersistence);
-
-      if (initialAuthToken) {
-        await signInWithCustomToken(auth, initialAuthToken);
-        console.log('Login com token customizado.');
-      } else {
-        await signInAnonymously(auth);
-        console.log('Login anônimo.');
-      }
-    } catch (error) {
-      console.error('Erro de autenticação Firebase:', error);
-      // Se a autenticação falhar, onAuthStateChanged ainda será chamado sem um usuário
-    }
-  }
-
-  // Inicializa o login
-  window.addEventListener('load', signIn);
-
-</script>
-
-<script>
-  // --- Funções de UI & Core ---
-
-  /** Helper para buscar elementos */
-  const $ = (s) => document.querySelector(s);
-
-  /** Mostra um toast de notificação */
-  function toast(msg, type = 'ok') {
-    const t = $('#toast');
-    t.textContent = msg;
-    t.className = type === 'ok' ? 'show' : `show ${type}`;
-    setTimeout(() => t.className = '', 3000);
-  }
-
-  /** Renderiza o console (existente) */
-  function renderConsole() {
-    $('#console').innerHTML = S.consoleOpen ? 'Logs (somente para referência):<br>' + console.logs.slice(-10).join('<br>') : '';
-  }
-
-  // Sobrescreve console.log para capturar logs
-  (function() {
-      const originalLog = console.log;
-      const originalWarn = console.warn;
-      const originalError = console.error;
-      console.logs = [];
-
-      function customLog(type, ...args) {
-          const msg = `[${new Date().toLocaleTimeString('pt-BR')}] [${type.toUpperCase()}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}`;
-          console.logs.push(`<span class="${type === 'error' ? 'err' : type === 'warn' ? 'warn' : 'ok'}">${msg}</span>`);
-          if (S.consoleOpen) renderConsole();
-          
-          if (type === 'log') originalLog.apply(console, args);
-          if (type === 'warn') originalWarn.apply(console, args);
-          if (type === 'error') originalError.apply(console, args);
-      }
-
-      console.log = (...args) => customLog('log', ...args);
-      console.warn = (...args) => customLog('warn', ...args);
-      console.error = (...args) => customLog('error', ...args);
-  })();
-
-
-  /**
-   * --- FUNÇÕES DE RENDERIZAÇÃO DE PAINÉIS ---
-   */
-
-  /** Renderiza o painel de core.storage (Baú) */
-  function renderConfigPanel() {
-    const panel = $('#panel-core-storage .panel-body');
-    if (!panel) return;
-    
-    const config = S.config;
-    const localConfig = localStorage.getItem('S.config');
-    const localSize = localConfig ? (new TextEncoder().encode(localConfig).length / 1024).toFixed(2) : '0.00';
-    
-    const lastSave = config.lastSave ? new Date(config.lastSave).toLocaleString('pt-BR') : 'Nunca';
-    const lastLoad = config.lastLoad ? new Date(config.lastLoad).toLocaleString('pt-BR') : 'Padrão';
-
-    let statusClass = 'mut';
-    if (S.firestoreStatus === 'Conectado') statusClass = 'ok';
-    if (S.firestoreStatus === 'ERRO') statusClass = 'err';
-    if (S.firestoreStatus === 'Novo') statusClass = 'warn';
-
-    panel.innerHTML = `
-      <div class="status-grid">
-        <span class="mut">ID de Usuário:</span> <span>${S.userId || 'Desconhecido'}</span>
-        <span class="mut">Status Firestore:</span> <span class="${statusClass}">${S.firestoreStatus}</span>
-        <span class="mut">Último Salvamento:</span> <span>${lastSave}</span>
-        <span class="mut">Último Carregamento:</span> <span>${lastLoad}</span>
-      </div>
-      <div class="line"></div>
-      <p class="mut" style="margin-top:0">Configuração Local (Backup)</p>
-      <div class="status-grid">
-        <span class="mut">Tamanho (KB):</span> <span>${localSize} KB</span>
-        <span class="mut">Versão Local:</span> <span>${localConfig ? 'Presente' : 'Vazio'}</span>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:14px;">
-        <button id="btnSaveConfig" class="btn">Salvar Manual</button>
-        <button id="btnExportConfig" class="btn">Exportar</button>
-        <input type="file" id="inputImportConfig" accept=".json" style="display:none;">
-        <button id="btnImportConfig" class="btn accent">Importar</button>
-      </div>
-    `;
-
-    // Adiciona event listeners
-    $('#btnSaveConfig').onclick = async () => {
-      await saveConfigToFirestore();
-      toast('Configuração salva!');
-    };
-    $('#btnExportConfig').onclick = exportConfig;
-    $('#btnImportConfig').onclick = () => $('#inputImportConfig').click();
-    $('#inputImportConfig').onchange = importConfig;
-  }
-
-  /** Lógica de Exportação de S.config */
-  function exportConfig() {
-    const configString = JSON.stringify(S.config, null, 2);
-    const blob = new Blob([configString], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `dual_config_export_${Date.now()}.json`;
-    a.click();
-    toast('Configuração exportada com sucesso!');
-  }
-
-  /** Lógica de Importação de S.config */
-  function importConfig(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const importedConfig = JSON.parse(e.target.result);
-        if (importedConfig.modules) {
-            
-          // Merge: Preserva configurações existentes e aplica as novas
-          S.config = {
-              ...S.config,
-              ...importedConfig,
-              modules: {
-                  ...S.config.modules,
-                  ...importedConfig.modules,
-              }
-          };
-          
-          await saveConfigToFirestore();
-          toast('Configuração importada e salva no Firestore!');
-        } else {
-          toast('Arquivo JSON inválido (Falta chave "modules")', 'err');
-        }
-      } catch (error) {
-        toast('Erro ao ler ou parsear o arquivo JSON.', 'err');
-        console.error('Erro de importação:', error);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = ''; // Limpa o input
-  }
-
-
-  /** Renderiza o menu de módulos (Estojo) */
-  function renderEstojo() {
-    const estojo = $('#menuEstojo');
-    estojo.classList.toggle('show', S.estojoOpen);
-    if (!S.estojoOpen) return;
-
-    const moduleList = estojo.querySelector('.panel-body');
-    if (!moduleList) return;
-
-    let html = '';
-    S.modules.forEach(key => {
-      const mod = S.config.modules[key] || { active: false, name: key, icon: '?' };
-      const isChecked = mod.active ? 'checked' : '';
-
-      html += `
-        <div class="module-item">
-          <div>${mod.icon} ${mod.name}</div>
-          <label class="toggle-switch">
-            <input type="checkbox" data-module="${key}" ${isChecked}>
-            <span class="slider"></span>
-          </label>
-        </div>
-      `;
-    });
-
-    moduleList.innerHTML = html;
-
-    // Adiciona listeners para os toggles
-    moduleList.querySelectorAll('input[type="checkbox"]').forEach(input => {
-      input.onchange = (e) => {
-        const moduleName = e.target.dataset.module;
-        const isActive = e.target.checked;
-        
-        S.config.modules[moduleName].active = isActive;
-        saveConfigToFirestore();
-        renderBrain(); // Atualiza a exibição dos painéis
-        toast(isActive ? `${moduleName} ativado.` : `${moduleName} desativado.`, 'ok');
-      };
-    });
-  }
-
-  /** Renderiza o HUD e todos os painéis visíveis */
-  function renderBrain() {
-    // 1. Renderiza o HUD (usuário/status)
-    const hudInfo = S.userId ? `<span class="mut">${S.firestoreStatus} | ${S.userId.substring(0, 8)}...</span>` : '<span class="warn">Desconectado</span>';
-    $('#hud-info').innerHTML = hudInfo;
-
-    // 2. Renderiza o conteúdo do #brain
-    const brain = $('#brain');
-    
-    // Mapeamento dos painéis
-    const panelRenderers = {
-      'core.storage': renderConfigPanel,
-      'net.ping': () => $('#panel-net-ping .panel-body').innerHTML = `
-        <p class="mut">Módulo para monitoramento de rede e ping.</p>
-        <p>Aguardando implementação da lógica de rede...</p>
-      `,
-      'sec.keys': () => $('#panel-sec-keys .panel-body').innerHTML = `
-        <p class="mut">Módulo para gerenciamento de chaves secretas (SK) e APIs.</p>
-        <p>Ainda sem chaves definidas. Status: Offline.</p>
-      `,
-      'app.dual': () => $('#panel-app-dual .panel-body').innerHTML = `
-        <p class="mut">Conteúdo principal do seu Organismo Dual.</p>
-        <h3 style="margin:0;">Bem-vindo, Operador!</h3>
-        <div class="line"></div>
-        <p>Este é o ponto de partida para suas aplicações. Use o **Estojo (Orbe)** para gerenciar o que você vê.</p>
-      `,
-    };
-
-    // Gera o HTML de todos os painéis
-    let allPanelsHtml = S.modules.map(moduleName => {
-      const mod = S.config.modules[moduleName] || { active: false, name: moduleName, icon: '?' };
-      const isActive = mod.active;
-
-      return `
-        <div id="panel-${moduleName.replace('.', '-')}" class="panel" style="display: ${isActive ? 'flex' : 'none'};">
-          <div class="panel-header">
-            <span>${mod.icon} ${mod.name}</span>
-            <span class="mut">${moduleName}</span>
-          </div>
-          <div class="panel-body">
-            <!-- Conteúdo será injetado pelo renderizador específico -->
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // Atualiza o container do cérebro
-    if (brain.innerHTML !== allPanelsHtml) {
-        brain.innerHTML = allPanelsHtml;
-    }
-
-
-    // 3. Executa os renderizadores para preencher o conteúdo dinâmico
-    S.modules.forEach(moduleName => {
-      const mod = S.config.modules[moduleName];
-      if (mod && mod.active && panelRenderers[moduleName]) {
-        panelRenderers[moduleName]();
-      }
-    });
-  }
-
-  // --- Eventos da Aplicação ---
-
-  function toggleConsole(){ 
-    S.consoleOpen=!S.consoleOpen; 
-    $('#console').classList.toggle('show', S.consoleOpen); 
-    renderConsole(); 
-  }
-
-  function toggleEstojo(){
-    S.estojoOpen = !S.estojoOpen;
-    renderEstojo();
-  }
-
-  // Bindings iniciais
-  window.onload = () => {
-    $('#btnConsole').onclick = toggleConsole;
-    $('#btnOrbe').onclick = toggleEstojo;
-
-    // O renderBrain é chamado após o listener do Firestore carregar a configuração
-    // Mas chamamos ele aqui para renderizar o esqueleto inicial e HUD
-    renderBrain();
-  };
-</script>
-
 </head>
 <body>
+<div id="appRoot">
+  <div class="orb-global-glow" aria-hidden="true"></div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Trocar tema" title="Trocar tema (Dark)"></button>
 
-<!-- HUD: Cabeçalho -->
-<header id="hud">
-  <div style="font-size:1.4em;font-weight:700;">UNO • TRINITY</div>
-  <div id="hud-info" class="mut">Carregando Auth...</div>
-  <div style="display:flex;gap:8px;">
-    <button id="btnConsole" class="btn btn-icon">
-      <span style="font-size:1.2em;">&gt;_</span>
-    </button>
-    <button id="btnOrbe" class="btn btn-icon accent" title="Estojo / Menu de Módulos">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-    </button>
-  </div>
-</header>
+  <section id="splash" aria-label="splash"><div class="orbe" id="splashOrbe" title="Toque" role="button" aria-pressed="false"></div></section>
 
-<!-- BRAIN: Container principal dos painéis -->
-<main id="brain">
-  <!-- Os painéis dos módulos serão inseridos aqui por renderBrain() -->
-</main>
+  <main id="spaceStage" role="main" aria-label="Espaço" style="display:none">
+    <div class="hud" role="toolbar" aria-label="HUD KOBLLUX">
+      <button id="btnOrbe" class="btn" aria-label="Abrir Orbe/Config">Orbe</button>
+      <div class="hud-title">KOBLLUX — Nebula Space</div>
+      <button id="btnMaster" class="btn-ghost" title="Abrir Masterclass">Masterclass</button>
+    </div>
 
-<!-- CONSOLE: Log de debug -->
-<div id="console"></div>
+    <section id="panelKx" style="top:84px;left:50%;transform:translateX(-50%);width:min(720px,94vw);position:fixed;z-index:140;background:rgba(255,255,255,0.02);padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)">
+      <div style="font-weight:700">KOBLLUX — Fundação</div>
+    </section>
 
-<!-- TOAST: Notificações -->
-<div id="toast"></div>
+    <div id="kxRodaViva" style="display:none;position:fixed;inset:0;z-index:120;place-items:center;"></div>
 
-<!-- MENU ESTOJO: Menu flutuante para gerenciar módulos -->
-<div id="menuEstojo" class="glass">
-  <div class="panel-header">
-    <span>💎 Estojo/Menu</span>
-    <button class="btn btn-icon" style="background:transparent;border:none;" onclick="toggleEstojo()">
-        <span style="font-size:1.2em;">✕</span>
-    </button>
-  </div>
-  <div class="panel-body">
-    <!-- Lista de módulos será injetada por renderEstojo() -->
-    Carregando módulos...
+    <div id="sigilPanel">
+      <div class="sigil-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>SIGILO</strong>
+          <div><button id="btnGenSigil" class="btn">Gerar</button></div>
+        </div>
+        <div id="sigilPreviewWrap"><svg id="sigilPreview" class="sigil-preview" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button id="btnDownloadSigil" class="btn">Baixar SVG</button><button id="btnCopySigil" class="btn-ghost">Copiar</button></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<canvas id="kx3gs"></canvas>
+
+<!-- Masterclass modal -->
+<div id="masterclassModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div class="master-title">Masterclass KOBLLUX</div><div style="opacity:.8">o app-organismo: do vazio ao loop consciente</div></div>
+      <div><button id="btnCloseMaster" class="btn-ghost">Fechar</button></div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="master-body"><p>Versão ritual — fundo totalmente escuro, partículas e sigilos integrados.</p></div>
   </div>
 </div>
 
+<script>
+/* Inline WebGL particle field (no Three.js) + Sigil generator + UI glue
+   - Background is pure dark (#000), glow from orb influences particle tone.
+   - Sigil generator creates a deterministic SVG from activation seed.
+*/
+(function(){
+  'use strict';
+  const $ = (s,r=document)=>r.querySelector(s);
+
+  // Archetypes with hue mapping
+  const ARCH = [
+    {key:'cuidador', label:'Cuidador', hue:185, color:'#39ffb6', freq:432},
+    {key:'criador', label:'Criador', hue:145, color:'#5CFF6A', freq:528},
+    {key:'heroi', label:'Herói', hue:20, color:'#FF6B6B', freq:396},
+    {key:'prestativo', label:'Prestativo', hue:40, color:'#FFC857', freq:639},
+    {key:'mago', label:'Mago', hue:210, color:'#7EC8FF', freq:741},
+    {key:'explorador', label:'Explorador', hue:195, color:'#64E3FF', freq:852},
+    {key:'rebelde', label:'Rebelde', hue:350, color:'#FF5C8A', freq:285},
+    {key:'inocente', label:'Inocente', hue:320, color:'#F3C1FF', freq:963},
+    {key:'amante', label:'Amante', hue:330, color:'#FF71CF', freq:528},
+    {key:'orfao', label:'Órfão', hue:0, color:'#A0A7B3', freq:417},
+    {key:'transformador', label:'Transformador', hue:190, color:'#00C5E5', freq:741},
+    {key:'sabio', label:'Sábio', hue:265, color:'#9D7BFF', freq:888}
+  ];
+
+  // Simple hash/PRNG
+  function hashString(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h = Math.imul(h ^ s.charCodeAt(i), 16777619); } return h >>> 0; }
+  function rngFrom(n){ let v = n>>>0; return function(){ v = Math.imul(v ^ (v << 13), 0x5bd1e995)>>>0; return (v / 4294967295); }; }
+
+  // UI elements
+  const splash = $('#splash'), orbe = $('#splashOrbe'), space = $('#spaceStage');
+  const themeToggle = $('#themeToggle');
+  const modal = $('#masterclassModal'), btnMaster = $('#btnMaster'), btnCloseMaster = $('#btnCloseMaster');
+  const btnGenSigil = $('#btnGenSigil'), sigPreview = $('#sigilPreview'), btnDownloadSigil = $('#btnDownloadSigil'), btnCopySigil = $('#btnCopySigil');
+
+  // Onboard: show space after pressing orb
+  function showSpace(){ if(splash) splash.style.display='none'; if(space) space.style.display='block'; }
+  orbe && orbe.addEventListener('click', showSpace, {passive:true});
+  // If previously onboarded, show space
+  if(localStorage.getItem('dual.onboard.ok')==='1'){ showSpace(); } else { /* keep splash */ }
+
+  // Theme toggle: we keep dark only per request, but allow cycling to medium if needed
+  let themeIndex = 0; const THEMES = [{name:'dark', bg:'#000'}, {name:'medium', bg:'#071017'}];
+  themeToggle && themeToggle.addEventListener('click', ()=>{ themeIndex = (themeIndex+1)%THEMES.length; document.body.style.background = THEMES[themeIndex].bg; });
+
+  // Canvas & WebGL setup
+  const canvas = document.getElementById('kx3gs');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  let gl = canvas.getContext('webgl', { alpha:true, antialias:true }) || canvas.getContext('experimental-webgl');
+  let width = 0, height = 0;
+  function resize(){ width = Math.max(1, Math.floor(window.innerWidth * dpr)); height = Math.max(1, Math.floor(window.innerHeight * dpr)); canvas.width = width; canvas.height = height; canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px'; if(gl){ gl.viewport(0,0,width,height); } }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  if(!gl){ console.warn('WebGL not available — particle canvas fallback activated'); /* fallback: simple 2D */ }
+
+  // Create shader program
+  function createShader(gl, type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); gl.deleteShader(s); return null; } return s; }
+  const vs = [
+    'attribute float aId;',
+    'uniform vec2 uRes; uniform float uTime; uniform float uHue;',
+    'varying float vId; varying vec2 vPos;',
+    'float rand(float n){ return fract(sin(n)*43758.5453123); }',
+    'void main(){',
+    '  float id = aId; vId = id; float r1 = rand(id*17.0); float r2 = rand(id*113.0); float ang = uTime*(0.2 + r2*1.2) + r1*6.28318; float layer = mix(0.4,1.0,fract(r1)); float radius = 0.15 + r1*0.85;',
+    '  float x = radius * cos(ang) * layer; float y = radius * sin(ang) * layer * 0.58;',
+    '  vec2 px = vec2((x*0.9 + 0.5) * uRes.x, (y*0.9 + 0.5) * uRes.y);',
+    '  vec2 ndc = vec2(px.x / uRes.x * 2.0 - 1.0, px.y / uRes.y * 2.0 - 1.0);',
+    '  vPos = vec2(x,y); gl_PointSize = mix(1.5, 3.8, layer); gl_Position = vec4(ndc, 0.0, 1.0);',
+    '}'
+  ].join('\n');
+  const fs = [
+    'precision mediump float;',
+    'uniform float uHue; uniform float uAlpha; uniform vec2 uRes; uniform vec2 uOrbe; varying vec2 vPos;',
+    'vec3 hsl2rgb(float h,float s,float l){ float c=(1.0-abs(2.0*l-1.0))*s; float x=c*(1.0-abs(mod(h*6.0,2.0)-1.0)); float m=l-0.5*c; vec3 rgb; if(h<1.0/6.0) rgb=vec3(c,x,0.0); else if(h<2.0/6.0) rgb=vec3(x,c,0.0); else if(h<3.0/6.0) rgb=vec3(0.0,c,x); else if(h<4.0/6.0) rgb=vec3(0.0,x,c); else if(h<5.0/6.0) rgb=vec3(x,0.0,c); else rgb=vec3(c,0.0,x); return rgb + m; }',
+    'void main(){ vec2 p = gl_PointCoord*2.0-1.0; float d = dot(p,p); float a = exp(-3.0*d); vec3 col = hsl2rgb(uHue,1.0,0.55); float distOrbe = distance(vPos, uOrbe); float glow = 1.0 - smoothstep(0.0, 0.9, distOrbe); float alpha = a * uAlpha * (0.3 + 0.7*glow); gl_FragColor = vec4(col, alpha); }'
+  ].join('\n');
+
+  let program = null, buffers = null, startTime = performance.now();
+
+  function initGL(){
+    if(!gl) return;
+    const vert = createShader(gl, gl.VERTEX_SHADER, vs);
+    const frag = createShader(gl, gl.FRAGMENT_SHADER, fs);
+    if(!vert || !frag) return;
+    program = gl.createProgram(); gl.attachShader(program, vert); gl.attachShader(program, frag); gl.linkProgram(program);
+    if(!gl.getProgramParameter(program, gl.LINK_STATUS)){ console.error('Program link error', gl.getProgramInfoLog(program)); return; }
+    gl.useProgram(program);
+    // attributes + buffers
+    const N = 800;
+    const ids = new Float32Array(N);
+    for(let i=0;i<N;i++) ids[i] = i+1;
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, ids, gl.STATIC_DRAW);
+    const aId = gl.getAttribLocation(program, 'aId'); gl.enableVertexAttribArray(aId); gl.vertexAttribPointer(aId, 1, gl.FLOAT, false, 0, 0);
+    // uniforms
+    program.uTime = gl.getUniformLocation(program, 'uTime');
+    program.uRes = gl.getUniformLocation(program, 'uRes');
+    program.uHue = gl.getUniformLocation(program, 'uHue');
+    program.uAlpha = gl.getUniformLocation(program, 'uAlpha');
+    program.uOrbe = gl.getUniformLocation(program, 'uOrbe');
+    program.uRes && gl.uniform2f(program.uRes, width, height);
+    program.uAlpha && gl.uniform1f(program.uAlpha, 0.9);
+  }
+
+  initGL();
+
+  function renderGL(now){
+    if(!gl || !program) return;
+    const t = (now - startTime) * 0.001;
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.uniform1f(program.uTime, t);
+    // map orbe position into particle space (-1..1 normalized coordinates roughly)
+    const rect = orbe.getBoundingClientRect();
+    const cx = (rect.left + rect.width/2 - window.innerWidth/2) / (window.innerWidth/2);
+    const cy = -(rect.top + rect.height/2 - window.innerHeight/2) / (window.innerHeight/2);
+    // convert to local normalized radius (matching shader's radius scale ~ -1..1)
+    const orbeX = cx*0.6, orbeY = cy*0.6;
+    gl.uniform2f(program.uOrbe, orbeX, orbeY);
+    // hue (use default ARCH center hue if present)
+    const hue = 200/360; gl.uniform1f(program.uHue, hue);
+    gl.uniform2f(program.uRes, width, height);
+    gl.drawArrays(gl.POINTS, 0, 800);
+    requestAnimationFrame(renderGL);
+  }
+  if(gl && program){ requestAnimationFrame(renderGL); }
+
+  // Fallback 2D if no WebGL/program
+  if(!gl || !program){
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    const W = canvas.width, H = canvas.height;
+    for(let i=0;i<400;i++){ particles.push({x: Math.random()*W, y: Math.random()*H, r:1+Math.random()*3, vx:(Math.random()-0.5)*0.6, vy:(Math.random()-0.5)*0.6}); }
+    (function tick(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(const p of particles){ p.x += p.vx; p.y += p.vy; if(p.x<0) p.x=canvas.width; if(p.x>canvas.width) p.x=0; if(p.y<0) p.y=canvas.height; if(p.y>canvas.height) p.y=0;
+        const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*6); g.addColorStop(0,'rgba(127,63,255,0.9)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*6,0,Math.PI*2); ctx.fill(); }
+      requestAnimationFrame(tick);
+    })();
+  }
+
+  // Sigil generator: deterministic SVG based on seed (string)
+  function genSigil(seedStr){
+    const h = hashString(seedStr || (Date.now().toString())); const rnd = rngFrom(h);
+    const W = 260, H = 260, cx = W/2, cy = H/2;
+    const N = 7 + Math.floor(rnd()*6);
+    const points = [];
+    for(let i=0;i<N;i++){ const ang = (i/N)*Math.PI*2 + rnd()*0.6; const r = 40 + rnd()*70; points.push({x:cx + r*Math.cos(ang), y:cy + r*Math.sin(ang)}); }
+    // build polygon path + inner star lines
+    let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for(let i=1;i<points.length;i++){ path += ` L ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)}`; }
+    path += ' Z';
+    // pick two hues
+    const a = Math.floor(rnd()*ARCH.length), b = Math.floor(rnd()*ARCH.length);
+    const hueA = ARCH[a].hue, hueB = ARCH[b].hue;
+    const gradId = 'g'+(h%100000);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs>
+      <radialGradient id="${gradId}" cx="35%" cy="28%" r="70%"><stop offset="0%" stop-color="${ARCH[a].color}"/><stop offset="100%" stop-color="${ARCH[b].color}"/></radialGradient>
+      <filter id="glow"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="${ARCH[a].color}" flood-opacity="0.55"/></filter>
+    </defs>
+    <rect width="100%" height="100%" fill="#000"/>
+    <g filter="url(#glow)">
+      <circle cx="${cx}" cy="${cy}" r="${30 + Math.floor(rnd()*30)}" fill="url(#${gradId})" />
+      <path d="${path}" fill="none" stroke="${ARCH[b].color}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+    </g>
+    </svg>`;
+    return svg;
+  }
+
+  function updateSigilPreview(svgStr){
+    if(!sigPreview) return;
+    sigPreview.innerHTML = svgStr;
+  }
+
+  btnGenSigil && btnGenSigil.addEventListener('click', ()=>{
+    const seed = prompt('Semente do sigilo (texto curto) — deixar em branco cria aleatório:');
+    const svg = genSigil(seed || String(Date.now()));
+    updateSigilPreview(svg);
+    try{ localStorage.setItem('dual.user.symbol', svg); }catch(e){}
+  }, {passive:true});
+
+  btnDownloadSigil && btnDownloadSigil.addEventListener('click', ()=>{
+    const svg = sigPreview.innerHTML || genSigil(String(Date.now()));
+    const blob = new Blob([svg], {type:'image/svg+xml'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'sigilo.svg'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),500);
+  }, {passive:true});
+
+  btnCopySigil && btnCopySigil.addEventListener('click', async ()=>{
+    const svg = sigPreview.innerHTML || genSigil(String(Date.now()));
+    try{ await navigator.clipboard.writeText(svg); alert('SVG copiado para a área de transferência'); }catch(e){ alert('Falha ao copiar'); }
+  }, {passive:true});
+
+  // load last sigil if any
+  try{ const last = localStorage.getItem('dual.user.symbol'); if(last) updateSigilPreview(last); }catch(e){}
+
+  // Masterclass modal
+  btnMaster && btnMaster.addEventListener('click', ()=>{ if(modal) modal.style.display='flex'; }, {passive:true});
+  const btnClose = $('#btnCloseMaster'); btnClose && btnClose.addEventListener('click', ()=>{ if(modal) modal.style.display='none'; }, {passive:true});
+
+  // ensure canvas sizing and start simple render loop
+  resize();
+
+  // export for debugging
+  window.KOBLLUX = window.KOBLLUX || {}; window.KOBLLUX.Sigil = { gen: genSigil };
+
+})(); // end
+</script>
 </body>
 </html>
-
